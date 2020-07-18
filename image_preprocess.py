@@ -49,3 +49,8 @@ if __name__ == '__main__':
     #dst = HZ_preprocess(input, True)
     dst = hair_removal(input)
     cv2.imwrite(img_path + 'w.png', dst)
+
+
+def gaussian_blur(img_crop):
+    kernel = np.ones((10, 10), np.float32) / 25
+    return cv2.filter2D(img_crop, -1, kernel)

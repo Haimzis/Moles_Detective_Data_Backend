@@ -43,28 +43,134 @@ def is_area_valid_for_transplantation(transplanted_object_mask, container_mask, 
     return False
 
 
-def fix_object_crop(transplanted_object_img, transplanted_object_mask):
+def opening_holes_in_img(transplanted_object_mask, iter, init_kernel, operator='open'):
+    if operator == 'open':
+        operator = cv2.MORPH_OPEN
+    elif operator == 'close':
+        operator = cv2.MORPH_CLOSE
+    else:
+        return None
+    op = transplanted_object_mask
+    for _ in range(iter):
+        kernel_size = init_kernel[0] + 1
+        init_kernel = (kernel_size, kernel_size)
+        kernel = np.ones(init_kernel, np.uint8)
+        op = cv2.morphologyEx(op, operator, kernel)
+    return op
+
+
+def fix_object_crop(transplanted_object_img, transplanted_object_mask, color_elimination=params.color_elimination_const):
     gray_scale_object_img = cv2.cvtColor(transplanted_object_img.astype('float32'), cv2.COLOR_RGB2GRAY).astype('uint8')
     color_high = np.array(np.max(gray_scale_object_img))
-    color_low = np.array(np.subtract(np.max(gray_scale_object_img), params.color_elimination_const), dtype=np.uint8)
+    color_low = np.array(np.subtract(np.max(gray_scale_object_img), color_elimination), dtype=np.uint8)
     skin_mask = cv2.inRange(gray_scale_object_img, color_low, color_high)
     com_skin_transplanted_object_mask = cv2.bitwise_not(skin_mask)
     transplanted_object_mask = cv2.bitwise_and(transplanted_object_mask, transplanted_object_mask,
                                                mask=com_skin_transplanted_object_mask)
 
     # fix single pixels
-    kernel = np.ones((2, 2), np.uint8)
-    opening = cv2.morphologyEx(transplanted_object_mask, cv2.MORPH_OPEN, kernel)
-    closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel)
-    kernel = np.ones((3, 3), np.uint8)
-    closing = cv2.morphologyEx(closing, cv2.MORPH_CLOSE, kernel)
-    transplanted_object_mask = cv2.bitwise_and(transplanted_object_mask, opening,
-                                               mask=closing)
+    transplanted_object_mask_opening = opening_holes_in_img(transplanted_object_mask, iter=15, init_kernel=(2, 2),
+                                                            operator='open')
+    transplanted_object_mask_closing = opening_holes_in_img(transplanted_object_mask, iter=7, init_kernel=(2, 2),
+                                                            operator='close')
+    transplanted_object_mask = cv2.bitwise_and(transplanted_object_mask, transplanted_object_mask_opening)
+    transplanted_object_mask = cv2.bitwise_or(transplanted_object_mask, transplanted_object_mask_closing,
+                                              mask=transplanted_object_mask_opening)
+    transplanted_object_mask = opening_holes_in_img(transplanted_object_mask, iter=2, init_kernel=(2, 2),
+                                                            operator='close')
 
     transplanted_object_img = cv2.bitwise_and(transplanted_object_img, transplanted_object_img,
                                               mask=transplanted_object_mask)
     return transplanted_object_img, transplanted_object_mask
 
+
+def my_image_blending(transplanted_object_img, transplanted_object_mask, container_img, container_updated_mask, transplant_coords):
+    ymin, ymax, xmin, xmax = transplant_coords
+    try:
+        container_updated_mask[ymin: ymax, xmin: xmax] = cv2.dilate(transplanted_object_mask,
+                                                                    np.ones((3, 3), np.uint8), iterations=1)
+        container_updated_mask = container_updated_mask.astype('uint8')
+        temp_mask = np.zeros(tuple(container_updated_mask.shape), dtype=np.uint8)
+        temp_mask[ymin: ymax, xmin: xmax] = transplanted_object_mask
+        temp_img = np.zeros(tuple(container_img.shape))
+        temp_img[ymin: ymax, xmin: xmax] = transplanted_object_img
+        temp_img = temp_img.astype('uint8')
+        nbitw_full_container_mask = cv2.bitwise_not(temp_mask.astype('uint8'))
+        container_img = cv2.bitwise_and(container_img, container_img, mask=nbitw_full_container_mask)
+        container_img = cv2.addWeighted(container_img, 1.0, temp_img, 1.0, 0)
+    except cv2.error:
+        print(transplant_coords)
+        print('container_img ', container_img.dtype)
+        print('temp ', temp_img.dtype)
+        print(cv2.error.msg)
+
+
+def expand_coords_for_pyramid(shape, transplant_coords):
+    pass
+
+
+def laplacian_pyramid_image_blending(transplanted_object_img, transplanted_object_mask, container_img,
+                                     container_updated_mask, transplant_coords, filter_coords):
+    ymin, ymax, xmin, xmax = transplant_coords
+    fymin, fymax, fxmin, fxmax = filter_coords
+    try:
+        container_updated_mask[ymin: ymax, xmin: xmax] = cv2.dilate(transplanted_object_mask,
+                                                                    np.ones((3, 3), np.uint8), iterations=1)
+        container_updated_mask = container_updated_mask.astype('uint8')
+        transplanted_img = np.zeros(tuple(container_img.shape), dtype=np.uint8)
+        transplanted_img[ymin: ymax, xmin: xmax, :] = transplanted_object_img
+        temp_mask = np.zeros(tuple(container_updated_mask.shape), dtype=np.uint8)
+        temp_mask[ymin: ymax, xmin: xmax] = transplanted_object_mask
+        nbitw_full_container_mask = cv2.bitwise_not(temp_mask.astype('uint8'))
+        container_img = cv2.bitwise_and(container_img, container_img, mask=nbitw_full_container_mask)
+        l_transplanted_img = transplanted_img[fymin: fymax, fxmin: fxmax]
+        l_container_img = container_img[fymin: fymax, fxmin: fxmax]
+        container_img[fymin: fymax, fxmin: fxmax] = pyramid_blending(l_container_img, l_transplanted_img)
+        pass
+    ## TODO: prevent glur
+
+    except cv2.error:
+        print(transplant_coords)
+        print('container_img ', container_img.dtype)
+        print(cv2.error.msg)
+
+
+
+def pyramid_blending(l_container_img, l_transplanted_img, mask=None, maxLevels=None, filterSizeIm=None, filterSizeMask=None):
+    c_container_img = l_container_img.copy()
+    c_transplanted_img = l_transplanted_img.copy()
+    gp_container_img = [c_container_img]
+    gp_transplanted_img = [c_transplanted_img]
+    for i in range(params.laplacian_pyramid_level):
+        c_container_img = cv2.pyrDown(c_container_img)
+        gp_container_img.append(c_container_img)
+        c_transplanted_img = cv2.pyrDown(c_transplanted_img)
+        gp_transplanted_img.append(c_transplanted_img)
+
+    c_container_img = gp_container_img[params.laplacian_pyramid_level - 1]
+    lp_container_img = [c_container_img]
+    for i in range(params.laplacian_pyramid_level - 1, 0, -1):
+        gaussian_expanded = cv2.pyrUp(gp_container_img[i])
+        laplacian = cv2.subtract(gp_container_img[i - 1], gaussian_expanded)
+        lp_container_img.append(laplacian)
+
+    c_transplanted_img = gp_transplanted_img[params.laplacian_pyramid_level - 1]
+    lp_transplanted_img = [c_transplanted_img]
+    for i in range(params.laplacian_pyramid_level - 1, 0, -1):
+        gaussian_expanded = cv2.pyrUp(gp_transplanted_img[i])
+        laplacian = cv2.subtract(gp_transplanted_img[i - 1], gaussian_expanded)
+        lp_transplanted_img.append(laplacian)
+
+    blended_image_pyramid = []
+    for transplanted_img_lap, container_img_lap in zip(lp_transplanted_img, lp_container_img):
+        laplacian = np.add(transplanted_img_lap, container_img_lap)
+        blended_image_pyramid.append(laplacian)
+
+    blended_image_reconstruct = blended_image_pyramid[0]
+    for i in range(1, params.laplacian_pyramid_level):
+        blended_image_reconstruct = cv2.pyrUp(blended_image_reconstruct)
+        blended_image_reconstruct = cv2.add(blended_image_pyramid[i], blended_image_reconstruct)
+    return blended_image_reconstruct
 
 def transplant_object_by_filter(container_img, container_mask, transplanted_data, filter_coords, container_updated_mask):
     appearance_amount = [1]  # ready for addition
@@ -88,23 +194,10 @@ def transplant_object_by_filter(container_img, container_mask, transplanted_data
         transplanted_object_mask = cv2.resize(transplanted_object_mask, (xmax - xmin, ymax - ymin), cv2.INTER_NEAREST)
         transplanted_object_img, transplanted_object_mask = fix_object_crop(transplanted_object_img, transplanted_object_mask)
         if is_area_valid_for_transplantation(transplanted_object_mask, container_mask, transplant_coords):
-            container_updated_mask[ymin: ymax, xmin: xmax] = cv2.dilate(transplanted_object_mask,
-                                                                        np.ones((3, 3), np.uint8), iterations=1)
-            container_updated_mask = container_updated_mask.astype('uint8')
-            temp_mask = np.zeros(tuple(container_updated_mask.shape), dtype=np.uint8)
-            temp_mask[ymin: ymax, xmin: xmax] = transplanted_object_mask
-            temp_img = np.zeros(tuple(container_img.shape))
-            temp_img[ymin: ymax, xmin: xmax] = transplanted_object_img
-            temp_img = temp_img.astype('uint8')
-            nbitw_full_container_mask = cv2.bitwise_not(temp_mask.astype('uint8'))
-            container_img = cv2.bitwise_and(container_img, container_img, mask=nbitw_full_container_mask)
-            try:
-                container_img = cv2.addWeighted(container_img, 1.0, temp_img, 1.0, 0)
-            except cv2.error:
-                print(transplant_coords)
-                print('container_img ', container_img.dtype)
-                print('temp ', temp_img.dtype)
-                print(cv2.error.msg)
+            if not params.laplacian_pyramid_image_blending:
+                my_image_blending(transplanted_object_img, transplanted_object_mask, container_img, container_updated_mask, transplant_coords)
+            else:
+                laplacian_pyramid_image_blending(transplanted_object_img, transplanted_object_mask, container_img, container_updated_mask, transplant_coords, filter_coords)
     return container_img, container_updated_mask, transplanted_data_names_list
 
 
@@ -124,3 +217,9 @@ def fill_container(container_img, container_mask, transplanted_data, filter_size
         filter_coords[2] = 0
         filter_coords[3] = min(filter_size, container_img.shape[1])
     return container_img, container_updated_mask, transplanted_data_list
+
+
+if __name__ == '__main__':
+    objects_data = utils.read_data(params.output_img_extraction, params.output_mask_extraction, '_segmentation')
+    objects_placeholders_data = utils.read_data(params.object_placeholder_imgs_dir, params.object_placeholder_masks_dir)
+    produce_fake_data(objects_data, objects_placeholders_data)

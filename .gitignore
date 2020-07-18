@@ -1,0 +1,5 @@
+*.png
+*.jpg
+*.jpeg
+Data/*/
+Output/objects_extraction/

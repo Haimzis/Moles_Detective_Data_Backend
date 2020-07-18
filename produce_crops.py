@@ -11,6 +11,9 @@ import utils
 labels_stats = {0: 0, 1: 0}
 
 
+# TODO: 1. encapsulate the flip and the rotation
+#      2. fix the save for small crops
+
 def produce_crops(data):
     utils.generated_data_directories_init()
     for data_dict in data:
@@ -37,6 +40,9 @@ def save_crop(img_crop, mask_crop, name, crop_coords):
         img_result = cv2.warpAffine(img_crop, M, (mask_crop.shape[1], mask_crop.shape[0]))
         mask_result = cv2.warpAffine(mask_crop, M, (mask_crop.shape[1], mask_crop.shape[0]))
         new_name = '/' + name + 'c_' + str(crop_coords[0]) + '_' + str(crop_coords[1]) + rot_str
+
+        if params.hair_removal and 'ha' in new_name:
+            img_crop = image_preprocess.hair_removal(img_crop)
         if params.HZ_preprocess:
             img_result = image_preprocess.HZ_preprocess(img_result)
         cv2.imwrite(params.output_img_data + new_name + '.jpg', img_result, [cv2.IMWRITE_JPEG_QUALITY, 100])
@@ -50,32 +56,18 @@ def generate_crops_from_image(name, img, mask):
         # img, mask = resize_to_crop_size(img, mask)
         # save_crop(img, mask, name + '_no_dup', np.array([0, params.crop_size[1] - 1, 0, params.crop_size[0] - 1]))
     else:
-        xy = np.array([tuple(crop_size), tuple(crop_size * 2), tuple(crop_size * 3), tuple(crop_size * 4)])
-        random_indices = np.random.choice(len(xy), params.crops_per_image, p=[0.5, 0.35, 0.1, 0.05])
-        random_crops_sizes_additions = np.random.randint(0, min(crop_size) - 1, params.crops_per_image)
-        crop_sizes = xy[random_indices] + np.dstack([random_crops_sizes_additions, random_crops_sizes_additions])[0]
-        ymin = np.random.randint(0, img.shape[0] - params.crop_size[1], params.crops_per_image)
-        xmin = np.random.randint(0, img.shape[1] - params.crop_size[0], params.crops_per_image)
-        ymax = [0] * params.crops_per_image
-        xmax = [0] * params.crops_per_image
-        for i in range(0, params.crops_per_image):
-            ymax[i] = ymin[i] + crop_sizes[i][0]
-            if ymax[i] >= img.shape[0]:
-                ymin[i] -= ymax[i] - img.shape[0]
-                ymax[i] -= ymax[i] - img.shape[0]
-            xmax[i] = xmin[i] + crop_sizes[i][1]
-            if xmax[i] >= img.shape[1]:
-                xmin[i] -= xmax[i] - img.shape[1]
-                xmax[i] -= xmax[i] - img.shape[1]
-        crop_coords = np.dstack([ymin, ymax, xmin, xmax])[0]
+        crop_sizes_samples = generate_crop_sizes_samples(crop_size)
+        crop_coords = generate_random_crops_coordinates(img.shape, crop_sizes_samples)
+
         for i, coords in enumerate(crop_coords):
-            if coords[1] - coords[0] != crop_sizes[i][1] or coords[3] - coords[2] != crop_sizes[i][0]:
-                print('something wrong')
+            if coords[1] - coords[0] != crop_sizes_samples[i][1] or coords[3] - coords[2] != crop_sizes_samples[i][0]:
+                print('crop size invalid, check code.')
+                exit(1)
         for i in range(0, params.crops_per_image):
-            mask_crop = mask[crop_coords[i][0]:crop_coords[i][1], crop_coords[i][2]:crop_coords[i][3]]
+            mask_crop = utils.cut_roi_from_mask(mask, crop_coords[i])
             if mask_crop.any() == 0:  # Background
                 if np.random.random_sample() <= params.background_prob:
-                    img_crop = img[crop_coords[i][0]:crop_coords[i][1], crop_coords[i][2]:crop_coords[i][3]]
+                    img_crop = utils.cut_roi_from_tensor(img, crop_coords[i])
                     img_crop, mask_crop = resize_to_crop_size(img_crop, mask_crop)
                     save_crop(img_crop, mask_crop, name, crop_coords[i])
                     labels_stats[0] += 1
@@ -94,9 +86,34 @@ def no_label_on_mask_border(mask):
     return not mask[:, [0, params.crop_size[0] - 1]].any() and not mask[[0, params.crop_size[1] - 1], :].any()
 
 
+def generate_crop_sizes_samples(crop_size):
+    xy = np.array([tuple(crop_size), tuple(crop_size * 2), tuple(crop_size * 3), tuple(crop_size * 4)])
+    random_indices = np.random.choice(len(xy), params.crops_per_image, p=[0.5, 0.35, 0.1, 0.05])
+    random_crops_sizes_additions = np.random.randint(0, min(crop_size) - 1, params.crops_per_image)
+    return xy[random_indices] + np.dstack([random_crops_sizes_additions, random_crops_sizes_additions])[0]
+
+
+def generate_random_crops_coordinates(img_shape, crop_sizes_samples):
+    ymin = np.random.randint(0, img_shape[0] - params.crop_size[1], params.crops_per_image)
+    xmin = np.random.randint(0, img_shape[1] - params.crop_size[0], params.crops_per_image)
+    ymax = [0] * params.crops_per_image
+    xmax = [0] * params.crops_per_image
+
+    for i in range(0, params.crops_per_image):
+        ymax[i] = ymin[i] + crop_sizes_samples[i][0]
+        if ymax[i] >= img_shape[0]:
+            ymin[i] -= ymax[i] - img_shape[0]
+            ymax[i] -= ymax[i] - img_shape[0]
+        xmax[i] = xmin[i] + crop_sizes_samples[i][1]
+        if xmax[i] >= img_shape[1]:
+            xmin[i] -= xmax[i] - img_shape[1]
+            xmax[i] -= xmax[i] - img_shape[1]
+    return np.dstack([ymin, ymax, xmin, xmax])[0]
+
+
 def shuffled_save_for_crop_with_object(img, mask, name, crop_coords):  # crop_coords = [ymin, ymax, xmin, xmax]
-    mask_crop = mask[crop_coords[0]:crop_coords[1], crop_coords[2]:crop_coords[3]]
-    img_crop = img[crop_coords[0]:crop_coords[1], crop_coords[2]:crop_coords[3]]
+    mask_crop = utils.cut_roi_from_mask(mask, crop_coords)
+    img_crop = utils.cut_roi_from_tensor(img, crop_coords)
     img_crop_resized, mask_crop_resized = resize_to_crop_size(img_crop, mask_crop)
     if no_label_on_mask_border(mask_crop_resized):
         save_crop(img_crop_resized, mask_crop_resized, name, crop_coords)

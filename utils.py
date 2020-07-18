@@ -94,6 +94,10 @@ def cut_roi_from_mask(mask, coords):  # crop_coords = [ymin, ymax, xmin, xmax]
     return mask[coords[0]: coords[1], coords[2]: coords[3]]
 
 
+def cut_roi_from_tensor(tensor, coords):  # crop_coords = [ymin, ymax, xmin, xmax]
+    return tensor[coords[0]: coords[1], coords[2]: coords[3], :]
+
+
 if __name__ == '__main__':
     # object_data = read_data(params.object_img_dir,
     #                         params.object_mask_dir,
