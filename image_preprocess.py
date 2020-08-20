@@ -36,6 +36,11 @@ def hair_removal(img):
     return dst
 
 
+def gaussian_blur(img_crop):
+    kernel = np.ones((10, 10), np.float32) / 25
+    return cv2.filter2D(img_crop, -1, kernel)
+
+
 def HZ_preprocess(img, hair=False):
     if hair:
         return clear_noise(improve_contrast(change_color_space(hair_removal(img))))
@@ -51,6 +56,4 @@ if __name__ == '__main__':
     cv2.imwrite(img_path + 'w.png', dst)
 
 
-def gaussian_blur(img_crop):
-    kernel = np.ones((10, 10), np.float32) / 25
-    return cv2.filter2D(img_crop, -1, kernel)
+

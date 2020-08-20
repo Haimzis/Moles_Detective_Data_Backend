@@ -1,5 +1,4 @@
 import os
-
 import numpy as np
 import tensorflow as tf
 import cv2
@@ -63,6 +62,25 @@ def extract_object_from_both_img_mask(data):
         print(object_img_path, ' object extracted')
 
 
+def extract_single_object_from_both_img_mask(img, mask, img_name):
+    if not mask.any():
+        return
+    object_coords = find_object_coords(mask)
+    object_img_cropped = img[object_coords[0]:object_coords[1], object_coords[2]:object_coords[3], :]
+    object_mask_cropped = mask[object_coords[0]:object_coords[1], object_coords[2]:object_coords[3]]
+    output_img_path = params.output_img_extraction + '/' + img_name + '.png'
+    try:
+        final_output_img_cropped = cv2.bitwise_and(object_img_cropped, object_img_cropped, mask=object_mask_cropped)
+        cv2.imwrite(output_img_path, final_output_img_cropped)
+        cv2.imwrite(params.output_mask_extraction + '/' + img_name + '.png', object_mask_cropped)
+    except cv2.error:
+        print('failed!')
+        print(img_name)
+        print(object_coords)
+        print(cv2.error.msg)
+    #print(output_img_path, ' object extracted')
+
+
 def read_data(images_dir=params.input_images_dir, masks_dir=params.input_masks_dir, labels_prefix=''):
     data = []
     img_names = []
@@ -98,21 +116,13 @@ def cut_roi_from_tensor(tensor, coords):  # crop_coords = [ymin, ymax, xmin, xma
     return tensor[coords[0]: coords[1], coords[2]: coords[3], :]
 
 
-if __name__ == '__main__':
-    # object_data = read_data(params.object_img_dir,
-    #                         params.object_mask_dir,
-    #                              '_segmentation')
-    # extract_object_from_both_img_mask(object_data)
-    pass
-
-
-def rotate(mask, angle):
+def rotate(mat, angle):
     """
-    :param mask: segmentation mask
+    :param mat: matrix or tensor
     :param angle: angle of rotation
-    :return: rotated segmentation mask without information loss
+    :return: rotated matrix without information loss
     """
-    height, width = mask.shape[:2]  # image shape has 3 dimensions
+    height, width = mat.shape[:2]  # image shape has 3 dimensions
     image_center = (
     width / 2, height / 2)  # getRotationMatrix2D needs coordinates in reverse order (width, height) compared to shape
 
@@ -131,7 +141,7 @@ def rotate(mask, angle):
     rotation_mat[1, 2] += bound_h / 2 - image_center[1]
 
     # rotate image with the new bounds and translated rotation matrix
-    rotated_mat = cv2.warpAffine(mask, rotation_mat, (bound_w, bound_h))
+    rotated_mat = cv2.warpAffine(mat, rotation_mat, (bound_w, bound_h))
     return rotated_mat
 
 

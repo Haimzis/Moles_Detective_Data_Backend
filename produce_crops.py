@@ -1,10 +1,6 @@
-import glob
-import os
 import cv2
 import params
 import numpy as np
-import data
-import tensorflow as tf
 import image_preprocess
 import utils
 
@@ -15,7 +11,6 @@ labels_stats = {0: 0, 1: 0}
 #      2. fix the save for small crops
 
 def produce_crops(data):
-    utils.generated_data_directories_init()
     for data_dict in data:
         img_path = data_dict['input']
         mask_path = data_dict['label']
@@ -72,7 +67,7 @@ def generate_crops_from_image(name, img, mask):
                     save_crop(img_crop, mask_crop, name, crop_coords[i])
                     labels_stats[0] += 1
             else:  # Mole
-                shuffled_save_for_crop_with_object(img, mask, name, crop_coords[i])
+                save_crop_with_object(img, mask, name, crop_coords[i])
                 labels_stats[1] += 1
 
 
@@ -111,7 +106,7 @@ def generate_random_crops_coordinates(img_shape, crop_sizes_samples):
     return np.dstack([ymin, ymax, xmin, xmax])[0]
 
 
-def shuffled_save_for_crop_with_object(img, mask, name, crop_coords):  # crop_coords = [ymin, ymax, xmin, xmax]
+def save_crop_with_object(img, mask, name, crop_coords):  # crop_coords = [ymin, ymax, xmin, xmax]
     mask_crop = utils.cut_roi_from_mask(mask, crop_coords)
     img_crop = utils.cut_roi_from_tensor(img, crop_coords)
     img_crop_resized, mask_crop_resized = resize_to_crop_size(img_crop, mask_crop)
@@ -140,4 +135,4 @@ def shuffled_save_for_crop_with_object(img, mask, name, crop_coords):  # crop_co
                                                                         params.max_shift_for_fix), img.shape[0])
                 shifted = True
         if shifted:
-            shuffled_save_for_crop_with_object(img, mask, name, crop_coords)
+            save_crop_with_object(img, mask, name, crop_coords)

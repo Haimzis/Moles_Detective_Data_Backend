@@ -40,5 +40,5 @@ def color_eval(segmented_mole_image):
 
 if __name__ == '__main__':
     img = cv2.imread(
-        '/home/haimzis/PycharmProjects/DL_training_preprocessing/Output/objects_extraction/transparent/ISIC_0000006.png', -1)
+        '/Output/objects_extraction/segmentation_purpose/transparent/ISIC_0000006.png', -1)
     color_eval(img)
