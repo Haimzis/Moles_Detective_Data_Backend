@@ -1,20 +1,11 @@
-import os
-import sys
 from io import BytesIO
-import tarfile
-import tempfile
-import random
-
-from six.moves import urllib
-import time
+import cv2
+import numpy as np
+import tensorflow as tf
+from PIL import Image
 from matplotlib import gridspec
 from matplotlib import pyplot as plt
-import numpy as np
-from PIL import Image
-import tensorflow as tf
 import params
-import image_preprocess
-import cv2
 
 
 class DeepLabModel(object):

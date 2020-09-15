@@ -42,7 +42,7 @@ def filter_segmented_segmentation_data_examples(data):
                     color_elimination += 1
                 elif key == ord('j'):
                     color_elimination -= 1
-                f_img, f_mask = fake_data_creation.fix_object_crop(img, mask,color_elimination)
+                f_img, f_mask = fake_data_creation.fix_object_crop(img, mask, color_elimination)
                 img = cv2.imread(img_path, -1)
                 mask = cv2.imread(mask_path, -1)
                 cv2.imshow('img', f_img)
@@ -76,6 +76,7 @@ def filter_segmented_classification_data_examples(classification_data_path):
         if not mask.any():
             shutil.move(image_path, image_path.replace(img_name + '.jpg', 'rejected/' + img_name + '.jpg'))
             print(img_name + ' rejected! - mask is empty')
+            continue
         cv2.imshow('segmentation result', results_container)
         key = None
         while key != ord('n') and key != ord('s'):

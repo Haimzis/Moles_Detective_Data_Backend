@@ -3,20 +3,38 @@ import numpy as np
 
 
 def clear_noise(img):
+    """
+    clear noise func
+    :param img: input
+    :return: img after noise cleaning
+    """
     return cv2.bilateralFilter(img, 9, 10, 75)
 
 
 def improve_contrast(img):
+    """
+    :param img: input
+    :return: histogram of contrast
+    """
     if len(img.shape) > 2:
         raise NameError('expect for gray-scale input')
     return cv2.equalizeHist(img)
 
 
 def change_color_space(img):
+    """
+    :param img: bgr / rgb input
+    :return: gray-scale img
+    """
     return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 
 def hair_removal(img):
+    """
+    hair-removal algorithm
+    :param img: input
+    :return: image after hair removal
+    """
     # Convert the original image to grayscale
     grayScale = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
@@ -37,11 +55,20 @@ def hair_removal(img):
 
 
 def gaussian_blur(img_crop):
+    """
+    :param img_crop: input
+    :return: blurred image
+    """
     kernel = np.ones((10, 10), np.float32) / 25
     return cv2.filter2D(img_crop, -1, kernel)
 
 
 def HZ_preprocess(img, hair=False):
+    """
+    my algorithm for image for training - based on many articles
+    :param img: input
+    :param hair: has hair or not
+    """
     if hair:
         return clear_noise(improve_contrast(change_color_space(hair_removal(img))))
     else:

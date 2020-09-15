@@ -5,7 +5,13 @@ import cv2
 import params
 
 
-def find_object_coords(object_mask, coords=None):  # crop_coords = [ymin, ymax, xmin, xmax]
+def find_object_coords(object_mask, coords=None):
+    """
+    find object coordination in a mask input
+    :param object_mask: mask input
+    :param coords: [ymin, ymax, xmin, xmax] - sub coords that contains the object
+    :return: [ymin, ymax, xmin, xmax] - minimal size image coords that contains the object
+    """
     min_mask_size = 5
     if object_mask.shape[0] < min_mask_size or object_mask.shape[1] < min_mask_size:
         raise Exception('mask size too small for analyze, must be atleast ({0}, {0})'.format(min_mask_size))
@@ -37,6 +43,11 @@ def find_object_coords(object_mask, coords=None):  # crop_coords = [ymin, ymax, 
 
 
 def extract_object_from_both_img_mask(data):
+    """
+    objects extraction func, by bitwise operations
+    :param data:many data frames: each one is: img and mask of the object
+    :return: writes img and label of the object only - every pixel that dont belongs to the object will be black
+    """
     for data_dict in data:
         object_img_path = data_dict['input']
         object_mask_path = data_dict['label']
@@ -63,6 +74,9 @@ def extract_object_from_both_img_mask(data):
 
 
 def extract_single_object_from_both_img_mask(img, mask, img_name):
+    """
+    specific extraction for classification data
+    """
     if not mask.any():
         return
     object_coords = find_object_coords(mask)
@@ -82,6 +96,13 @@ def extract_single_object_from_both_img_mask(img, mask, img_name):
 
 
 def read_data(images_dir=params.input_images_dir, masks_dir=params.input_masks_dir, labels_prefix=''):
+    """
+    read data from path
+    :param images_dir: directory of images
+    :param masks_dir: directory of masks
+    :param labels_prefix: specific prefix of labels - optional.
+    :return: returns data frames array
+    """
     data = []
     img_names = []
     for depth in range(0, params.max_depth):
@@ -97,6 +118,9 @@ def read_data(images_dir=params.input_images_dir, masks_dir=params.input_masks_d
 
 
 def generated_data_directories_init():
+    """
+    create directories func
+    """
     if not os.path.exists(params.output_dir):
         os.mkdir(params.output_dir)
         os.mkdir(params.output_img_data)
@@ -109,15 +133,28 @@ def generated_data_directories_init():
 
 
 def cut_roi_from_mask(mask, coords):  # crop_coords = [ymin, ymax, xmin, xmax]
+    """
+    extraction of roi with coords, from mask
+    :param mask: input mask
+    :param coords: input coords
+    :return: the desired roi of the mask
+    """
     return mask[coords[0]: coords[1], coords[2]: coords[3]]
 
 
 def cut_roi_from_tensor(tensor, coords):  # crop_coords = [ymin, ymax, xmin, xmax]
+    """
+    extraction of roi with coords, from img
+    :param tensor: input img
+    :param coords: input coords
+    :return: the desired roi of the img
+    """
     return tensor[coords[0]: coords[1], coords[2]: coords[3], :]
 
 
 def rotate(mat, angle):
     """
+    rotation by angle func
     :param mat: matrix or tensor
     :param angle: angle of rotation
     :return: rotated matrix without information loss
@@ -163,3 +200,5 @@ def align(mask):
             if alignment_res[j, i].any():
                 alignment_res[j, i] = 100
     return alignment_res
+
+
