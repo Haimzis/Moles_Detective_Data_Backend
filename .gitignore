@@ -3,3 +3,4 @@
 *.jpeg
 .idea
 *.csv
+/Output/poc_view/
