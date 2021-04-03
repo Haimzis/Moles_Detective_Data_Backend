@@ -39,6 +39,11 @@ def save_crop(img_crop, mask_crop, name, crop_coords):
     """
     crop_versions = [(img_crop, mask_crop, name)]
 
+    if params.hair_removal:
+        img_crop = image_preprocess.hair_removal(img_crop)
+    elif params.HZ_preprocess:
+        img_crop = image_preprocess.HZ_preprocess(img_crop)
+
     # rotation
     while len(crop_versions) != 0:
         rotated_crops = []
@@ -64,11 +69,6 @@ def save_crop(img_crop, mask_crop, name, crop_coords):
             flipped_crops.append((img, mask, name))
     crop_versions += flipped_crops
 
-    # preprocess algorithms
-    # if params.hair_removal and 'ha' in new_name:
-    #     img_crop = image_preprocess.hair_removal(img_crop)
-    # if params.HZ_preprocess:
-    #     img_result = image_preprocess.HZ_preprocess(img_result)
     for img, mask, name in crop_versions:
         final_name = name + 'cor_' + str(crop_coords[0]) + '_' + str(crop_coords[1])
         cv2.imwrite(params.output_img_data + '/' + final_name + '.jpg', cv2.resize(img, params.crop_size), [cv2.IMWRITE_JPEG_QUALITY, 100])

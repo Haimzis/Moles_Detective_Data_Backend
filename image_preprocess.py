@@ -39,7 +39,7 @@ def hair_removal(img):
     grayScale = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
     # Kernel for the morphological filtering
-    kernel = cv2.getStructuringElement(1, (9, 9))
+    kernel = cv2.getStructuringElement(1, (5, 5))
 
     # Perform the blackHat filtering on the grayscale image to find the
     # hair countours
@@ -59,7 +59,7 @@ def gaussian_blur(img_crop):
     :param img_crop: input
     :return: blurred image
     """
-    kernel = np.ones((10, 10), np.float32) / 25
+    kernel = np.ones((5, 5), np.float32) / 25
     return cv2.filter2D(img_crop, -1, kernel)
 
 

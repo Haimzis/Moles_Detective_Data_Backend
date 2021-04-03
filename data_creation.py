@@ -6,9 +6,7 @@ from utils import read_data, generated_data_directories_init
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 
-# DATASET
-flags.DEFINE_integer('image_size', 200, 'output data size (X,X)')
-
+# DATASET SETTINGS
 flags.DEFINE_enum('dataset_activity', 'training_data', ['training_data', 'fake_data'],
                   'which dataset creation process to perform')
 
@@ -18,8 +16,6 @@ flags.DEFINE_string('dataset_images_dir', './Data/img',
 
 flags.DEFINE_string('dataset_masks_dir', './Data/final_masks',
                     'where is the dataset masks is found.')
-
-flags.DEFINE_string('output_dir', '/output/dir', 'where to export the generated data')
 
 # Fake Data - relevant only when dataset_activity == 'fake_data'
 flags.DEFINE_string('extracted_images_dir', 'Output/objects_extraction/segmentation_purpose/transparent',
@@ -34,14 +30,6 @@ flags.DEFINE_string('placeholders_images_dir', 'Data/fake_data/img',
 flags.DEFINE_string('placeholders_masks_dir', 'Data/fake_data/masks',
                     'where is the placeholders masks for transplantation is found.')
 
-flags.DEFINE_integer('fake_artifacts_amount', 14000, 'how many fake data to generate')
-
-# image preprocess
-flags.DEFINE_enum('data_preprocess', None, ['hair_removal', 'HZ'],
-                  'which preprocess to activate on generated data')
-
-flags.DEFINE_enum('image_blending', 'regular', ['regular', 'laplacian_pyramid'],
-                  'how to blend the images when create fake data')
 
 
 if __name__ == '__main__':
