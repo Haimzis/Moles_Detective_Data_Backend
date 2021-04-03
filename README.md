@@ -3,7 +3,7 @@ This is the Data Backend of MolesDetective Project,
 In this part of the project we created augmentation and image preprocess flow  
 that will makes more learning samples, and will make our small datasets to be more balanced.  
 
-###**Usage**:
+### **Usage**:
 1. Download the source code from github
 2. In data_creation.py script, chose between the enums ['training_data', 'fake_data'],
    set input and output directories paths.
