@@ -18,7 +18,7 @@ Real Data Augmentation: (without image blending on synthetic data)
 | Original | ![](Data/Input/go_63.jpg)| ![](Data/Input/go_63.png) |
 | Random Crop & Flip |  ![](Output/RandomCropFlipped/go_63_no_dup__v_h_vhcor_0_199.jpg) | ![](Output/RandomCropFlipped/go_63_no_dup__v_h_vhcor_0_199.png) |
 |  Equalize Histogram & Greyscale |  ![](Output/Guassian_grey/go_63_no_dup__v_hcor_0_199.jpg) | ![](Output/Guassian_grey/go_63_no_dup__v_hcor_0_199.png) |
-|  Hair Removal |  ![](Output/without hair/go_63_no_dup__v_h_vhcor_0_199.jpg) | ![](Output/without hair/go_63_no_dup__v_h_vhcor_0_199.png) |
+|  Hair Removal | ![](Output/without_hair/go_63_no_dup__v_h_vhcor_0_199.jpg) | ![](Output/without_hair/go_63_no_dup__v_h_vhcor_0_199.png) |
 
 Fake Data Augmentation:  
 (image blending between Object image + mask into Template Object + Mask)
