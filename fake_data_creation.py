@@ -147,6 +147,7 @@ def load_transplant_object_datadict(transplant_coords, transplant_object):
     transplanted_object_img = cv2.resize(transplanted_object_img, get_image_size_by_coords(transplant_coords))
     transplanted_object_mask = cv2.resize(transplanted_object_mask, get_image_size_by_coords(transplant_coords),
                                           cv2.INTER_NEAREST)
+    transplanted_object_img = cv2.bitwise_and(transplanted_object_img, transplanted_object_img, mask=transplanted_object_mask)
     return transplanted_object_img, transplanted_object_mask, transplanted_data_names_list
 
 

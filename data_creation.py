@@ -7,7 +7,7 @@ flags = tf.app.flags
 FLAGS = flags.FLAGS
 
 # DATASET SETTINGS
-flags.DEFINE_enum('dataset_activity', 'training_data', ['training_data', 'fake_data'],
+flags.DEFINE_enum('dataset_activity', 'fake_data', ['training_data', 'fake_data'],
                   'which dataset creation process to perform')
 
 # Training Data  - relevant only when dataset_activity == 'training_data'
@@ -18,16 +18,16 @@ flags.DEFINE_string('dataset_masks_dir', './Data/final_masks',
                     'where is the dataset masks is found.')
 
 # Fake Data - relevant only when dataset_activity == 'fake_data'
-flags.DEFINE_string('extracted_images_dir', 'Output/objects_extraction/segmentation_purpose/transparent',
+flags.DEFINE_string('extracted_images_dir', 'Data/Input/img',
                     'where is the extracted images for transplantation is found.')
 
-flags.DEFINE_string('extracted_masks_dir', 'Output/objects_extraction/segmentation_purpose/annotations',
+flags.DEFINE_string('extracted_masks_dir', 'Data/Input/label',
                     'where is the extracted masks for transplantation is found.')
 
-flags.DEFINE_string('placeholders_images_dir', 'Data/fake_data/img',
+flags.DEFINE_string('placeholders_images_dir', 'Data/fake/img',
                     'where is the placeholders images for transplantation is found.')
 
-flags.DEFINE_string('placeholders_masks_dir', 'Data/fake_data/masks',
+flags.DEFINE_string('placeholders_masks_dir', 'Data/fake/label',
                     'where is the placeholders masks for transplantation is found.')
 
 
